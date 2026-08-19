@@ -95,7 +95,9 @@ function CandidateDetails({ candidate }: { candidate: NotificationCandidate }) {
 
 export default function NotificationWorkbench() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const readRequestRef = useRef(0);
   const [workbook, setWorkbook] = useState<WorkbookData | null>(null);
+  const [analysisRevision, setAnalysisRevision] = useState(0);
   const [fileName, setFileName] = useState("");
   const [isReading, setIsReading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -144,17 +146,25 @@ export default function NotificationWorkbench() {
       setError("Elegí un archivo Excel con extensión .xlsx.");
       return;
     }
+    const requestId = readRequestRef.current + 1;
+    readRequestRef.current = requestId;
     setIsReading(true);
+    setWorkbook(null);
+    setFileName(file.name);
+    setSelectedIds(new Set());
+    setExpandedIds(new Set());
+    setGeneratedOnce(false);
     setError("");
     setGeneratedMessage("");
     try {
       const result = await parseWorkbook(file);
+      if (requestId !== readRequestRef.current) return;
       const detected = detectIncidents(result.records, settings);
       setWorkbook(result);
       setFileName(file.name);
       setSelectedIds(new Set(detected.map((candidate) => candidate.id)));
       setExpandedIds(new Set());
-      setGeneratedOnce(false);
+      setAnalysisRevision((current) => current + 1);
       setSearch("");
       setTypeFilter("all");
       window.setTimeout(
@@ -162,6 +172,7 @@ export default function NotificationWorkbench() {
         80,
       );
     } catch (cause) {
+      if (requestId !== readRequestRef.current) return;
       setWorkbook(null);
       setFileName("");
       setError(
@@ -170,7 +181,10 @@ export default function NotificationWorkbench() {
           : "No se pudo interpretar el archivo seleccionado.",
       );
     } finally {
-      setIsReading(false);
+      if (requestId === readRequestRef.current) {
+        setIsReading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -185,6 +199,7 @@ export default function NotificationWorkbench() {
   };
 
   const resetWorkbook = () => {
+    readRequestRef.current += 1;
     setWorkbook(null);
     setFileName("");
     setError("");
@@ -364,7 +379,11 @@ export default function NotificationWorkbench() {
           />
         </section>
       ) : (
-        <section className="review-shell" id="revision">
+        <section
+          className="review-shell"
+          id="revision"
+          key={`analysis-${analysisRevision}`}
+        >
           <div className="file-strip">
             <div className="file-strip-icon"><FileSpreadsheet /></div>
             <div>
@@ -444,7 +463,10 @@ export default function NotificationWorkbench() {
                     const selected = selectedIds.has(candidate.id);
                     const expanded = expandedIds.has(candidate.id);
                     return (
-                      <div className={`candidate ${selected ? "selected" : ""}`} key={candidate.id}>
+                      <div
+                        className={`candidate ${selected ? "selected" : ""}`}
+                        key={`${analysisRevision}-${candidate.id}`}
+                      >
                         <div className="candidate-main">
                           <label className="checkbox-control">
                             <input

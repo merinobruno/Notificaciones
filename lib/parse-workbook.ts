@@ -90,6 +90,11 @@ interface EmployeeMaster {
   sector: string;
 }
 
+export interface WorkbookSheetData {
+  sheet: string;
+  data: Row[];
+}
+
 function buildEmployeeMaster(rows: Row[]): Map<string, EmployeeMaster> {
   if (!rows.length) return new Map();
   const headerRow = rows.findIndex((row) => {
@@ -113,8 +118,10 @@ function buildEmployeeMaster(rows: Row[]): Map<string, EmployeeMaster> {
   return master;
 }
 
-export async function parseWorkbook(file: File): Promise<WorkbookData> {
-  const sheets = await readXlsxFile(file);
+export function parseWorkbookSheets(
+  fileName: string,
+  sheets: WorkbookSheetData[],
+): WorkbookData {
   const sheetNames = sheets.map((sheet) => sheet.sheet);
   if (!sheetNames.length) throw new Error("El archivo no contiene hojas legibles.");
 
@@ -228,7 +235,7 @@ export async function parseWorkbook(file: File): Promise<WorkbookData> {
 
   const dates = records.map((record) => record.date.getTime());
   return {
-    fileName: file.name,
+    fileName,
     sheetName,
     records,
     warnings,
@@ -236,4 +243,9 @@ export async function parseWorkbook(file: File): Promise<WorkbookData> {
     dateTo: new Date(Math.max(...dates)),
     employeeCount: new Set(records.map((record) => record.employeeId)).size,
   };
+}
+
+export async function parseWorkbook(file: File): Promise<WorkbookData> {
+  const sheets = (await readXlsxFile(file)) as WorkbookSheetData[];
+  return parseWorkbookSheets(file.name, sheets);
 }
