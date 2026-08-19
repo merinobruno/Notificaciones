@@ -283,8 +283,8 @@ export default function NotificationWorkbench() {
           <Image
             src="/brand/logo/fisterra-lockup-horizontal.svg"
             alt="Fisterra"
-            width={168}
-            height={45}
+            width={184}
+            height={40}
             loading="eager"
           />
           <span className="brand-area">Rubros laborales</span>

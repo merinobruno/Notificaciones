@@ -64,7 +64,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, label:has(input:focu
   backdrop-filter: blur(18px);
 }
 .brand { display: flex; align-items: center; gap: 16px; color: var(--fs-ink); text-decoration: none; }
-.brand img { display: block; width: 168px; height: auto; }
+.brand img { display: block; width: 184px; height: auto; }
 .brand-area {
   padding-left: 16px; border-left: 1px solid rgba(32, 43, 86, 0.22);
   color: var(--fs-neutral-500); font-size: 11px; font-weight: 600;
@@ -454,7 +454,7 @@ h1 span:last-child { color: var(--fs-ink); font-weight: 430; }
 }
 @media (max-width: 680px) {
   .topbar { min-height: 68px; padding: 11px 18px; }
-  .brand img { width: 132px; }
+  .brand img { width: 145px; }
   .brand-area { display: none; }
   .privacy-badge { width: 36px; height: 36px; justify-content: center; padding: 0; font-size: 0; }
   .hero { padding: 46px 18px 30px; }
