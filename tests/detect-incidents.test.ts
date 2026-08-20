@@ -97,6 +97,38 @@ test("clasifica los sectores sin depender de mayúsculas o tildes", () => {
   assert.equal(expectedPunchCount("Depósito"), 4);
 });
 
+test("excluye del análisis los días desactivados", () => {
+  const candidates = detectIncidents(
+    [
+      record({
+        rowNumber: 1,
+        date: new Date(2026, 7, 9, 12),
+        movements: ["07:10", "11:00", "11:30", "16:00"],
+      }),
+      record(),
+    ],
+    {
+      lateToleranceMinutes: 0,
+      breakLimitMinutes: 30,
+      includedWeekdays: [1],
+    },
+  );
+
+  const late = candidates.find((candidate) => candidate.type === "late");
+  assert.equal(late?.details.length, 1);
+  assert.equal(late?.details[0].date.getDay(), 1);
+  assert.equal(late?.totalMinutes, 8);
+
+  assert.deepEqual(
+    detectIncidents([record()], {
+      lateToleranceMinutes: 0,
+      breakLimitMinutes: 30,
+      includedWeekdays: [],
+    }),
+    [],
+  );
+});
+
 test("valida horarios y presenta duraciones", () => {
   assert.equal(minutesFromTime("07:05"), 425);
   assert.equal(minutesFromTime("25:00"), null);

@@ -45,6 +45,16 @@ import type {
 
 type TypeFilter = "all" | IncidentType;
 
+const WEEKDAY_OPTIONS = [
+  { value: 0, short: "D", label: "Domingo" },
+  { value: 1, short: "L", label: "Lunes" },
+  { value: 2, short: "M", label: "Martes" },
+  { value: 3, short: "X", label: "Miércoles" },
+  { value: 4, short: "J", label: "Jueves" },
+  { value: 5, short: "V", label: "Viernes" },
+  { value: 6, short: "S", label: "Sábado" },
+] as const;
+
 function todayInputValue(): string {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60_000;
@@ -127,6 +137,7 @@ export default function NotificationWorkbench() {
   const [settings, setSettings] = useState<DetectionSettings>({
     lateToleranceMinutes: 0,
     breakLimitMinutes: 30,
+    includedWeekdays: WEEKDAY_OPTIONS.map((day) => day.value),
   });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -658,6 +669,35 @@ function SettingsPanel({
           onChange={(event) => onLetterDateChange(event.target.value)}
         />
       </label>
+      <fieldset className="weekday-field">
+        <legend>Días incluidos</legend>
+        <p>Desactivá los días que no querés analizar.</p>
+        <div className="weekday-selector">
+          {WEEKDAY_OPTIONS.map((day) => {
+            const included = (settings.includedWeekdays ?? []).includes(day.value);
+            return (
+              <button
+                type="button"
+                key={day.value}
+                className={`weekday-button ${included ? "active" : ""}`}
+                aria-label={`${included ? "Quitar" : "Incluir"} ${day.label}`}
+                aria-pressed={included}
+                title={day.label}
+                onClick={() => {
+                  const current = settings.includedWeekdays ?? [];
+                  const includedWeekdays = included
+                    ? current.filter((value) => value !== day.value)
+                    : [...current, day.value].sort((left, right) => left - right);
+                  onSettingsChange({ ...settings, includedWeekdays });
+                }}
+              >
+                <strong>{day.short}</strong>
+                <span>{day.label.slice(0, 3)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
       <div className="rule-field">
         <div>
           <span className="rule-dot late" />

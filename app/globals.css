@@ -190,6 +190,26 @@ h1 span:last-child { color: var(--fs-ink); font-weight: 430; }
 .field-label input:focus, .number-control input:focus, .search-field:focus-within {
   border-color: var(--fs-navy); box-shadow: 0 0 0 3px rgba(10, 47, 67, 0.1);
 }
+.weekday-field {
+  min-width: 0; margin: 20px 0 0; padding: 0 0 19px;
+  border: 0; border-bottom: 1px solid var(--line);
+}
+.weekday-field legend { padding: 0; color: var(--fs-navy); font-size: 11px; font-weight: 650; }
+.weekday-field p { margin: 5px 0 11px; color: var(--fs-neutral-500); font-size: 9px; }
+.weekday-selector { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.weekday-button {
+  min-width: 0; min-height: 46px; padding: 6px 2px; display: grid; place-items: center;
+  gap: 2px; border: 1px solid var(--line); border-radius: 9px;
+  background: rgba(255, 255, 255, 0.6); color: var(--fs-neutral-500); cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+.weekday-button:hover { border-color: rgba(10, 47, 67, 0.42); transform: translateY(-1px); }
+.weekday-button strong { font-size: 12px; line-height: 1; }
+.weekday-button span { overflow: hidden; max-width: 100%; font-size: 6px; font-weight: 600; text-overflow: clip; }
+.weekday-button.active {
+  border-color: var(--fs-navy); background: var(--fs-navy); color: var(--fs-white);
+  box-shadow: 0 6px 14px rgba(10, 47, 67, 0.14);
+}
 .rule-field {
   padding: 19px 0; display: flex; align-items: center; justify-content: space-between;
   gap: 14px; border-bottom: 1px solid var(--line);

@@ -46,6 +46,7 @@ La aplicación es estática desde el punto de vista de datos: todo el procesamie
 - Tolerancia para llegadas tarde: `0` minutos por defecto.
 - Duración permitida de descanso: `30` minutos por defecto.
 - Fecha que se imprime en la notificación.
+- Días de la semana incluidos en el análisis; todos quedan activos inicialmente.
 
 El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina esperan 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4 fichadas. Toda cantidad diferente de la esperada aparece en la solapa **Irregularidades** como alerta de revisión y no genera un documento Word.
 

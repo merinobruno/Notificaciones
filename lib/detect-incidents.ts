@@ -109,6 +109,13 @@ export function detectIncidents(
   };
 
   for (const record of records) {
+    if (
+      settings.includedWeekdays &&
+      !settings.includedWeekdays.includes(record.date.getDay())
+    ) {
+      continue;
+    }
+
     const firstMovement = record.movements[0];
     if (firstMovement && record.shiftStart) {
       const delay = elapsedMinutes(record.shiftStart, firstMovement);

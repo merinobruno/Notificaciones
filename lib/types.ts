@@ -78,6 +78,7 @@ export type NotificationCandidate =
 export interface DetectionSettings {
   lateToleranceMinutes: number;
   breakLimitMinutes: number;
+  includedWeekdays?: number[];
 }
 
 export interface WorkbookData {
