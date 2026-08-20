@@ -49,7 +49,7 @@ const WEEKDAY_OPTIONS = [
   { value: 0, short: "D", label: "Domingo" },
   { value: 1, short: "L", label: "Lunes" },
   { value: 2, short: "M", label: "Martes" },
-  { value: 3, short: "X", label: "Miércoles" },
+  { value: 3, short: "M", label: "Miércoles" },
   { value: 4, short: "J", label: "Jueves" },
   { value: 5, short: "V", label: "Viernes" },
   { value: 6, short: "S", label: "Sábado" },
@@ -744,7 +744,7 @@ function SettingsPanel({
       </div>
       <div className="settings-note">
         <strong>El descanso se calcula entre las fichadas 2 y 3.</strong>
-        <p>Administración, Reparto, Ventas y Cocina esperan 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4; cualquier diferencia se muestra como irregularidad.</p>
+        <p>Administración, Reparto, Ventas y Cocina requieren al menos 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4; cualquier diferencia se muestra como irregularidad.</p>
       </div>
     </aside>
   );

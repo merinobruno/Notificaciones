@@ -76,12 +76,21 @@ test("los sectores especiales esperan dos fichadas y no controlan descanso", () 
   }
 });
 
-test("marca como irregular una cantidad distinta de la esperada", () => {
+test("acepta fichadas adicionales en los sectores de dos movimientos", () => {
   const specialSector = detectIncidents(
     [record({ sector: "Administración", movements: ["07:00", "11:00", "11:45", "16:00"] })],
     { lateToleranceMinutes: 0, breakLimitMinutes: 30 },
   );
-  assert.deepEqual(specialSector.map((candidate) => candidate.type), ["irregularity"]);
+  assert.deepEqual(specialSector, []);
+
+  const incompleteSpecialSector = detectIncidents(
+    [record({ sector: "Administración", movements: ["07:00"] })],
+    { lateToleranceMinutes: 0, breakLimitMinutes: 30 },
+  );
+  assert.deepEqual(
+    incompleteSpecialSector.map((candidate) => candidate.type),
+    ["irregularity"],
+  );
 
   const regularSector = detectIncidents(
     [record({ movements: ["07:00", "11:00", "11:30", "16:00", "16:05"] })],

@@ -132,7 +132,11 @@ export function detectIncidents(
     }
 
     const expectedCount = expectedPunchCount(record.sector);
-    if (record.movements.length !== expectedCount) {
+    const hasIrregularPunchCount =
+      expectedCount === 2
+        ? record.movements.length < expectedCount
+        : record.movements.length !== expectedCount;
+    if (hasIrregularPunchCount) {
       const detail: IrregularityIncident = {
         type: "irregularity",
         date: record.date,

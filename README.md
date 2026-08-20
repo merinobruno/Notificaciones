@@ -48,7 +48,7 @@ La aplicación es estática desde el punto de vista de datos: todo el procesamie
 - Fecha que se imprime en la notificación.
 - Días de la semana incluidos en el análisis; todos quedan activos inicialmente.
 
-El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina esperan 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4 fichadas. Toda cantidad diferente de la esperada aparece en la solapa **Irregularidades** como alerta de revisión y no genera un documento Word.
+El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina requieren al menos 2 fichadas y no se controlan por descanso; registrar más de 2 no se considera irregular. Los demás sectores esperan exactamente 4 fichadas. Las cantidades inválidas aparecen en la solapa **Irregularidades** como alertas de revisión y no generan documentos Word.
 
 Las reglas automáticas generan una preselección. La revisión humana previa a la descarga es parte del flujo porque el Excel puede contener excepciones, fichadas incompletas o cambios de turno.
 
