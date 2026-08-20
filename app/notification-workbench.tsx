@@ -27,7 +27,6 @@ import {
 import {
   detectIncidents,
   formatDuration,
-  isDocumentCandidate,
 } from "@/lib/detect-incidents";
 import {
   downloadBlob,
@@ -149,11 +148,6 @@ export default function NotificationWorkbench() {
     [workbook, settings],
   );
 
-  const documentCandidates = useMemo(
-    () => candidates.filter(isDocumentCandidate),
-    [candidates],
-  );
-
   const filteredCandidates = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("es");
     return candidates.filter((candidate) => {
@@ -167,11 +161,14 @@ export default function NotificationWorkbench() {
     });
   }, [candidates, search, typeFilter]);
 
-  const selectedCandidates = documentCandidates.filter((candidate) =>
+  const selectedCandidates = candidates.filter((candidate) =>
     selectedIds.has(candidate.id),
   );
   const selectedLate = selectedCandidates.filter((candidate) => candidate.type === "late").length;
   const selectedBreak = selectedCandidates.filter((candidate) => candidate.type === "break").length;
+  const selectedIrregularity = selectedCandidates.filter(
+    (candidate) => candidate.type === "irregularity",
+  ).length;
   const irregularityCount = candidates
     .filter((candidate) => candidate.type === "irregularity")
     .reduce((sum, candidate) => sum + candidate.details.length, 0);
@@ -199,9 +196,7 @@ export default function NotificationWorkbench() {
       const detected = detectIncidents(result.records, settings);
       setWorkbook(result);
       setFileName(file.name);
-      setSelectedIds(
-        new Set(detected.filter(isDocumentCandidate).map((candidate) => candidate.id)),
-      );
+      setSelectedIds(new Set(detected.map((candidate) => candidate.id)));
       setExpandedIds(new Set());
       setAnalysisRevision((current) => current + 1);
       setSearch("");
@@ -272,7 +267,6 @@ export default function NotificationWorkbench() {
     setSelectedIds((current) => {
       const next = new Set(current);
       for (const candidate of filteredCandidates) {
-        if (!isDocumentCandidate(candidate)) continue;
         if (selected) next.add(candidate.id);
         else next.delete(candidate.id);
       }
@@ -284,9 +278,7 @@ export default function NotificationWorkbench() {
     setSettings(value);
     if (workbook) {
       const detected = detectIncidents(workbook.records, value);
-      setSelectedIds(
-        new Set(detected.filter(isDocumentCandidate).map((candidate) => candidate.id)),
-      );
+      setSelectedIds(new Set(detected.map((candidate) => candidate.id)));
       setExpandedIds(new Set());
       setGeneratedMessage("");
     }
@@ -458,7 +450,7 @@ export default function NotificationWorkbench() {
                 <div>
                   <p className="section-kicker">PASO 2</p>
                   <h2>Revisá los resultados</h2>
-                  <p>Las notificaciones se preseleccionan; las irregularidades quedan señaladas solo para revisión.</p>
+                  <p>Todos los avisos, incluidas las irregularidades, quedan preseleccionados para exportar.</p>
                 </div>
                 <span className="counter-chip">{selectedCandidates.length} docs · {irregularityCount} alertas</span>
               </div>
@@ -494,43 +486,32 @@ export default function NotificationWorkbench() {
 
               <div className="selection-actions">
                 <span>{filteredCandidates.length} resultados</span>
-                {filteredCandidates.some(isDocumentCandidate) ? (
-                  <div>
-                    <button type="button" onClick={() => selectFiltered(true)}>Seleccionar visibles</button>
-                    <button type="button" onClick={() => selectFiltered(false)}>Quitar visibles</button>
-                  </div>
-                ) : (
-                  <span className="review-only-note"><AlertTriangle size={13} /> Alertas solo para revisión</span>
-                )}
+                <div>
+                  <button type="button" onClick={() => selectFiltered(true)}>Seleccionar visibles</button>
+                  <button type="button" onClick={() => selectFiltered(false)}>Quitar visibles</button>
+                </div>
               </div>
 
               <div className="candidate-list">
                 {filteredCandidates.length ? (
                   filteredCandidates.map((candidate) => {
-                    const documentCandidate = isDocumentCandidate(candidate);
                     const selected = selectedIds.has(candidate.id);
                     const expanded = expandedIds.has(candidate.id);
                     return (
                       <div
-                        className={`candidate ${selected ? "selected" : ""} ${documentCandidate ? "" : "review-only"}`}
+                        className={`candidate ${selected ? "selected" : ""}`}
                         key={`${analysisRevision}-${candidate.id}`}
                       >
                         <div className="candidate-main">
-                          {documentCandidate ? (
-                            <label className="checkbox-control">
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                onChange={() => toggleSelection(candidate.id)}
-                                aria-label={`${selected ? "Excluir" : "Incluir"} ${candidate.employeeName}`}
-                              />
-                              <span><Check size={14} /></span>
-                            </label>
-                          ) : (
-                            <span className="irregular-marker" title="Esta alerta no genera un documento">
-                              <AlertTriangle size={14} />
-                            </span>
-                          )}
+                          <label className="checkbox-control">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => toggleSelection(candidate.id)}
+                              aria-label={`${selected ? "Excluir" : "Incluir"} ${candidate.employeeName}`}
+                            />
+                            <span><Check size={14} /></span>
+                          </label>
                           <div className="avatar">{initials(candidate.employeeName)}</div>
                           <div className="candidate-identity">
                             <strong>{candidate.employeeName}</strong>
@@ -552,7 +533,7 @@ export default function NotificationWorkbench() {
                           </div>
                           <div className="incident-total">
                             {candidate.type === "irregularity" ? (
-                              <><strong>Revisar</strong><span>no genera Word</span></>
+                              <><strong>Aviso</strong><span>Word exportable</span></>
                             ) : (
                               <><strong>+{formatDuration(candidate.totalMinutes)}</strong><span>acumulado</span></>
                             )}
@@ -599,6 +580,7 @@ export default function NotificationWorkbench() {
                 <div className="generation-summary">
                   <span><i className="late" />Tardanzas <strong>{selectedLate}</strong></span>
                   <span><i className="break" />Descansos <strong>{selectedBreak}</strong></span>
+                  <span><i className="irregularity" />Irregularidades <strong>{selectedIrregularity}</strong></span>
                 </div>
                 <button
                   type="button"

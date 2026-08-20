@@ -56,12 +56,6 @@ export function expectedPunchCount(sector: string): 2 | 4 {
     : 4;
 }
 
-export function isDocumentCandidate(
-  candidate: NotificationCandidate,
-): candidate is Extract<NotificationCandidate, { type: "late" | "break" }> {
-  return candidate.type === "late" || candidate.type === "break";
-}
-
 function candidateId(record: AttendanceRecord, type: IncidentType): string {
   return `${employeeKey(record)}::${type}`;
 }

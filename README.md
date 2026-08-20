@@ -6,7 +6,7 @@ Aplicación web para convertir un reporte semanal de fichadas en notificaciones 
 
 1. Lee un archivo `.xlsx` con las columnas `Usuario`, `Legajo`, `DNI`, `Fecha`, `Movimientos` y `Turno`.
 2. Detecta llegadas posteriores al inicio de turno y descansos que superan el límite configurado.
-3. Controla la cantidad esperada de fichadas y señala los días irregulares para revisión.
+3. Controla la cantidad esperada de fichadas y prepara avisos exportables para los días irregulares.
 4. Agrupa las incidencias por empleado y tipo de notificación.
 5. Permite revisar, filtrar, incluir o excluir casos antes de generar documentos.
 6. Descarga un ZIP con un `.docx` por empleado y por tipo de notificación.
@@ -48,7 +48,7 @@ La aplicación es estática desde el punto de vista de datos: todo el procesamie
 - Fecha que se imprime en la notificación.
 - Días de la semana incluidos en el análisis; todos quedan activos inicialmente.
 
-El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina requieren al menos 2 fichadas y no se controlan por descanso; registrar más de 2 no se considera irregular. Los demás sectores esperan exactamente 4 fichadas. Las cantidades inválidas aparecen en la solapa **Irregularidades** como alertas de revisión y no generan documentos Word.
+El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina requieren al menos 2 fichadas y no se controlan por descanso; registrar más de 2 no se considera irregular. Los demás sectores esperan exactamente 4 fichadas. Las cantidades inválidas aparecen en la solapa **Irregularidades** y pueden exportarse como avisos Word con el detalle de las fichadas registradas.
 
 Las reglas automáticas generan una preselección. La revisión humana previa a la descarga es parte del flujo porque el Excel puede contener excepciones, fichadas incompletas o cambios de turno.
 

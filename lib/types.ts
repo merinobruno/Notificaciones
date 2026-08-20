@@ -1,5 +1,5 @@
 export type IncidentType = "late" | "break" | "irregularity";
-export type DocumentIncidentType = Exclude<IncidentType, "irregularity">;
+export type DocumentIncidentType = IncidentType;
 
 export interface AttendanceRecord {
   rowNumber: number;
@@ -39,8 +39,11 @@ export interface IrregularityIncident {
   expectedCount: 2 | 4;
 }
 
-export type DocumentIncidentDetail = LateIncident | BreakIncident;
-export type IncidentDetail = DocumentIncidentDetail | IrregularityIncident;
+export type DocumentIncidentDetail =
+  | LateIncident
+  | BreakIncident
+  | IrregularityIncident;
+export type IncidentDetail = DocumentIncidentDetail;
 
 interface NotificationCandidateBase {
   id: string;
@@ -69,11 +72,10 @@ export interface IrregularityNotificationCandidate
 
 export type DocumentNotificationCandidate =
   | LateNotificationCandidate
-  | BreakNotificationCandidate;
-
-export type NotificationCandidate =
-  | DocumentNotificationCandidate
+  | BreakNotificationCandidate
   | IrregularityNotificationCandidate;
+
+export type NotificationCandidate = DocumentNotificationCandidate;
 
 export interface DetectionSettings {
   lateToleranceMinutes: number;

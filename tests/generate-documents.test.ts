@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Packer } from "docx";
+import JSZip from "jszip";
 import {
   buildNotificationDocument,
   generateNotificationZip,
@@ -28,6 +29,25 @@ const candidate: DocumentNotificationCandidate = {
   ],
 };
 
+const irregularityCandidate: DocumentNotificationCandidate = {
+  id: "100002::irregularity",
+  type: "irregularity",
+  employeeName: "PERSONA CON FICHADAS INCOMPLETAS",
+  employeeId: "100002",
+  taxId: "27-12345678-8",
+  sector: "Planta",
+  totalMinutes: 0,
+  details: [
+    {
+      type: "irregularity",
+      date: new Date(2026, 7, 10, 12),
+      movements: ["07:08", "11:02", "16:01"],
+      actualCount: 3,
+      expectedCount: 4,
+    },
+  ],
+};
+
 test("genera un DOCX válido y no vacío", async () => {
   const document = buildNotificationDocument(candidate, new Date(2026, 7, 19, 12));
   const buffer = await Packer.toBuffer(document);
@@ -44,6 +64,28 @@ test("construye el nombre de archivo esperado", () => {
       new Date(2026, 7, 15, 12),
     ),
     "PERSONA DE PRUEBA - Legajo 100001 - Exceso descanso 10-08 al 15-08.docx",
+  );
+});
+
+test("genera un aviso DOCX para las irregularidades", async () => {
+  const document = buildNotificationDocument(
+    irregularityCandidate,
+    new Date(2026, 7, 19, 12),
+  );
+  const buffer = await Packer.toBuffer(document);
+  const zip = await JSZip.loadAsync(buffer);
+  const documentXml = await zip.file("word/document.xml")?.async("string");
+
+  assert.ok(buffer.byteLength > 2_000);
+  assert.match(documentXml ?? "", /Omisiones de Registro por Huella/);
+  assert.match(documentXml ?? "", /07:08 - 11:02 - 16:01/);
+  assert.equal(
+    notificationFileName(
+      irregularityCandidate,
+      new Date(2026, 7, 10, 12),
+      new Date(2026, 7, 15, 12),
+    ),
+    "PERSONA CON FICHADAS INCOMPLETAS - Legajo 100002 - Irregularidades de fichada 10-08 al 15-08.docx",
   );
 });
 
