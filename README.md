@@ -6,9 +6,10 @@ Aplicación web para convertir un reporte semanal de fichadas en notificaciones 
 
 1. Lee un archivo `.xlsx` con las columnas `Usuario`, `Legajo`, `DNI`, `Fecha`, `Movimientos` y `Turno`.
 2. Detecta llegadas posteriores al inicio de turno y descansos que superan el límite configurado.
-3. Agrupa las incidencias por empleado y tipo de notificación.
-4. Permite revisar, filtrar, incluir o excluir casos antes de generar documentos.
-5. Descarga un ZIP con un `.docx` por empleado y por tipo de notificación.
+3. Controla la cantidad esperada de fichadas y señala los días irregulares para revisión.
+4. Agrupa las incidencias por empleado y tipo de notificación.
+5. Permite revisar, filtrar, incluir o excluir casos antes de generar documentos.
+6. Descarga un ZIP con un `.docx` por empleado y por tipo de notificación.
 
 El Excel y los datos personales se procesan íntegramente en el navegador. No se envían ni almacenan en un servidor.
 
@@ -45,6 +46,8 @@ La aplicación es estática desde el punto de vista de datos: todo el procesamie
 - Tolerancia para llegadas tarde: `0` minutos por defecto.
 - Duración permitida de descanso: `30` minutos por defecto.
 - Fecha que se imprime en la notificación.
+
+El descanso se calcula por la duración entre las fichadas 2 y 3, sin comparar el horario fijo del intervalo informado en el Excel. Administración, Reparto, Ventas y Cocina esperan 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4 fichadas. Toda cantidad diferente de la esperada aparece en la solapa **Irregularidades** como alerta de revisión y no genera un documento Word.
 
 Las reglas automáticas generan una preselección. La revisión humana previa a la descarga es parte del flujo porque el Excel puede contener excepciones, fichadas incompletas o cambios de turno.
 

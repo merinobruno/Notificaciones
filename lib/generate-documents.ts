@@ -16,8 +16,8 @@ import {
 import JSZip from "jszip";
 import { formatDuration } from "./detect-incidents";
 import type {
-  IncidentDetail,
-  NotificationCandidate,
+  DocumentIncidentDetail,
+  DocumentNotificationCandidate,
 } from "./types";
 
 const MONTHS = [
@@ -73,7 +73,7 @@ function textParagraph(text: string, bold = false): Paragraph {
   });
 }
 
-function detailDate(detail: IncidentDetail): string {
+function detailDate(detail: DocumentIncidentDetail): string {
   return `${formatDateNumeric(detail.date)} (${WEEKDAYS[detail.date.getDay()]})`;
 }
 
@@ -94,7 +94,7 @@ function cell(text: string, width: number, header = false): TableCell {
 }
 
 function detailTable(
-  candidate: NotificationCandidate,
+  candidate: DocumentNotificationCandidate,
   breakLimitMinutes: number,
 ): Table {
   const headers =
@@ -154,7 +154,7 @@ function detailTable(
 }
 
 export function buildNotificationDocument(
-  candidate: NotificationCandidate,
+  candidate: DocumentNotificationCandidate,
   letterDate: Date,
   breakLimitMinutes = 30,
 ): Document {
@@ -247,7 +247,7 @@ function safeFilePart(value: string): string {
 }
 
 export function notificationFileName(
-  candidate: NotificationCandidate,
+  candidate: DocumentNotificationCandidate,
   dateFrom: Date,
   dateTo: Date,
 ): string {
@@ -258,7 +258,7 @@ export function notificationFileName(
 }
 
 export async function generateNotificationZip(
-  candidates: NotificationCandidate[],
+  candidates: DocumentNotificationCandidate[],
   letterDate: Date,
   dateFrom: Date,
   dateTo: Date,

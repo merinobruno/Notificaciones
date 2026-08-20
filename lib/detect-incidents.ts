@@ -4,9 +4,18 @@ import type {
   DetectionSettings,
   IncidentDetail,
   IncidentType,
+  IrregularityIncident,
   LateIncident,
   NotificationCandidate,
 } from "./types";
+
+const TWO_PUNCH_SECTORS = new Set([
+  "administracion",
+  "reparto",
+  "venta",
+  "ventas",
+  "cocina",
+]);
 
 export function minutesFromTime(value: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -30,6 +39,29 @@ function employeeKey(record: AttendanceRecord): string {
   return record.employeeId || record.employeeName;
 }
 
+function normalizeSector(value: string): string[] {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("es")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+export function expectedPunchCount(sector: string): 2 | 4 {
+  return normalizeSector(sector).some((word) => TWO_PUNCH_SECTORS.has(word))
+    ? 2
+    : 4;
+}
+
+export function isDocumentCandidate(
+  candidate: NotificationCandidate,
+): candidate is Extract<NotificationCandidate, { type: "late" | "break" }> {
+  return candidate.type === "late" || candidate.type === "break";
+}
+
 function candidateId(record: AttendanceRecord, type: IncidentType): string {
   return `${employeeKey(record)}::${type}`;
 }
@@ -38,33 +70,42 @@ export function detectIncidents(
   records: AttendanceRecord[],
   settings: DetectionSettings,
 ): NotificationCandidate[] {
-  const groups = new Map<
-    string,
-    Omit<NotificationCandidate, "details" | "totalMinutes"> & {
-      details: IncidentDetail[];
-    }
-  >();
+  const groups = new Map<string, NotificationCandidate>();
 
-  const addIncident = (
-    record: AttendanceRecord,
-    type: IncidentType,
-    detail: IncidentDetail,
-  ) => {
+  const addIncident = (record: AttendanceRecord, detail: IncidentDetail) => {
+    const type = detail.type;
     const id = candidateId(record, type);
     const existing = groups.get(id);
     if (existing) {
-      existing.details.push(detail);
+      if (existing.type === "late" && detail.type === "late") {
+        existing.details.push(detail);
+      } else if (existing.type === "break" && detail.type === "break") {
+        existing.details.push(detail);
+      } else if (
+        existing.type === "irregularity" &&
+        detail.type === "irregularity"
+      ) {
+        existing.details.push(detail);
+      }
       return;
     }
-    groups.set(id, {
+
+    const base = {
       id,
-      type,
       employeeName: record.employeeName,
       employeeId: record.employeeId,
       taxId: record.taxId,
       sector: record.sector,
-      details: [detail],
-    });
+      totalMinutes: 0,
+    };
+
+    if (detail.type === "late") {
+      groups.set(id, { ...base, type: "late", details: [detail] });
+    } else if (detail.type === "break") {
+      groups.set(id, { ...base, type: "break", details: [detail] });
+    } else {
+      groups.set(id, { ...base, type: "irregularity", details: [detail] });
+    }
   };
 
   for (const record of records) {
@@ -79,12 +120,25 @@ export function detectIncidents(
           clockIn: firstMovement,
           lateMinutes: delay,
         };
-        addIncident(record, "late", detail);
+        addIncident(record, detail);
       }
     }
 
-    // A missing final clock-out must not hide a valid break pair.
-    if (record.movements.length >= 3) {
+    const expectedCount = expectedPunchCount(record.sector);
+    if (record.movements.length !== expectedCount) {
+      const detail: IrregularityIncident = {
+        type: "irregularity",
+        date: record.date,
+        movements: [...record.movements],
+        actualCount: record.movements.length,
+        expectedCount,
+      };
+      addIncident(record, detail);
+    }
+
+    // El descanso se mide únicamente entre las fichadas 2 y 3. El intervalo
+    // fijo del Excel no se utiliza, y los sectores de dos fichadas se excluyen.
+    if (expectedCount === 4 && record.movements.length >= 3) {
       const breakStart = record.movements[1];
       const breakEnd = record.movements[2];
       const duration = elapsedMinutes(breakStart, breakEnd);
@@ -97,26 +151,45 @@ export function detectIncidents(
           breakMinutes: duration,
           excessMinutes: duration - settings.breakLimitMinutes,
         };
-        addIncident(record, "break", detail);
+        addIncident(record, detail);
       }
     }
   }
 
   return [...groups.values()]
-    .map((group): NotificationCandidate => ({
-      ...group,
-      details: [...group.details].sort(
-        (left, right) => left.date.getTime() - right.date.getTime(),
-      ),
-      totalMinutes: group.details.reduce(
-        (sum, detail) =>
-          sum +
-          (detail.type === "late"
-            ? detail.lateMinutes
-            : detail.excessMinutes),
-        0,
-      ),
-    }))
+    .map((group): NotificationCandidate => {
+      if (group.type === "late") {
+        return {
+          ...group,
+          details: [...group.details].sort(
+            (left, right) => left.date.getTime() - right.date.getTime(),
+          ),
+          totalMinutes: group.details.reduce(
+            (sum, detail) => sum + detail.lateMinutes,
+            0,
+          ),
+        };
+      }
+      if (group.type === "break") {
+        return {
+          ...group,
+          details: [...group.details].sort(
+            (left, right) => left.date.getTime() - right.date.getTime(),
+          ),
+          totalMinutes: group.details.reduce(
+            (sum, detail) => sum + detail.excessMinutes,
+            0,
+          ),
+        };
+      }
+      return {
+        ...group,
+        details: [...group.details].sort(
+          (left, right) => left.date.getTime() - right.date.getTime(),
+        ),
+        totalMinutes: 0,
+      };
+    })
     .sort((left, right) => {
       const byName = left.employeeName.localeCompare(right.employeeName, "es");
       if (byName !== 0) return byName;

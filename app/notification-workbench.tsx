@@ -15,7 +15,6 @@ import {
   Search,
   ShieldCheck,
   UploadCloud,
-  Users,
 } from "lucide-react";
 import {
   type ChangeEvent,
@@ -25,7 +24,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { detectIncidents, formatDuration } from "@/lib/detect-incidents";
+import {
+  detectIncidents,
+  formatDuration,
+  isDocumentCandidate,
+} from "@/lib/detect-incidents";
 import {
   downloadBlob,
   formatDateNumeric,
@@ -58,7 +61,9 @@ function initials(name: string): string {
 }
 
 function typeLabel(type: IncidentType): string {
-  return type === "late" ? "Llegadas tarde" : "Exceso de descanso";
+  if (type === "late") return "Llegadas tarde";
+  if (type === "break") return "Exceso de descanso";
+  return "Fichadas irregulares";
 }
 
 function detailDate(detail: IncidentDetail): string {
@@ -69,26 +74,39 @@ function detailDate(detail: IncidentDetail): string {
 }
 
 function CandidateDetails({ candidate }: { candidate: NotificationCandidate }) {
+  const headers =
+    candidate.type === "late"
+      ? ["Fecha", "Turno → fichada", "Tardanza"]
+      : candidate.type === "break"
+        ? ["Fecha", "Salida → regreso", "Exceso"]
+        : ["Fecha", "Horarios registrados", "Cantidad"];
+
   return (
-    <div className="candidate-details">
+    <div className={`candidate-details ${candidate.type}`}>
       <div className="detail-table-head">
-        <span>Fecha</span>
-        <span>{candidate.type === "late" ? "Turno → fichada" : "Salida → regreso"}</span>
-        <span>{candidate.type === "late" ? "Tardanza" : "Exceso"}</span>
+        {headers.map((header) => <span key={header}>{header}</span>)}
       </div>
-      {candidate.details.map((detail, index) => (
-        <div className="detail-table-row" key={`${detail.date.toISOString()}-${index}`}>
-          <span>{detailDate(detail)}</span>
-          <strong>
-            {detail.type === "late"
-              ? `${detail.shiftStart} → ${detail.clockIn}`
-              : `${detail.breakStart} → ${detail.breakEnd}`}
-          </strong>
-          <em>
-            +{detail.type === "late" ? detail.lateMinutes : detail.excessMinutes} min
-          </em>
-        </div>
-      ))}
+      {candidate.type === "late" && candidate.details.map((detail, index) => (
+          <div className="detail-table-row" key={`${detail.date.toISOString()}-${index}`}>
+            <span>{detailDate(detail)}</span>
+            <strong>{detail.shiftStart} → {detail.clockIn}</strong>
+            <em>+{detail.lateMinutes} min</em>
+          </div>
+        ))}
+      {candidate.type === "break" && candidate.details.map((detail, index) => (
+          <div className="detail-table-row" key={`${detail.date.toISOString()}-${index}`}>
+            <span>{detailDate(detail)}</span>
+            <strong>{detail.breakStart} → {detail.breakEnd}</strong>
+            <em>+{detail.excessMinutes} min</em>
+          </div>
+        ))}
+      {candidate.type === "irregularity" && candidate.details.map((detail, index) => (
+          <div className="detail-table-row" key={`${detail.date.toISOString()}-${index}`}>
+            <span>{detailDate(detail)}</span>
+            <strong>{detail.movements.length ? detail.movements.join(" · ") : "Sin fichadas"}</strong>
+            <em>{detail.actualCount} de {detail.expectedCount}</em>
+          </div>
+        ))}
     </div>
   );
 }
@@ -120,6 +138,11 @@ export default function NotificationWorkbench() {
     [workbook, settings],
   );
 
+  const documentCandidates = useMemo(
+    () => candidates.filter(isDocumentCandidate),
+    [candidates],
+  );
+
   const filteredCandidates = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("es");
     return candidates.filter((candidate) => {
@@ -133,11 +156,14 @@ export default function NotificationWorkbench() {
     });
   }, [candidates, search, typeFilter]);
 
-  const selectedCandidates = candidates.filter((candidate) =>
+  const selectedCandidates = documentCandidates.filter((candidate) =>
     selectedIds.has(candidate.id),
   );
   const selectedLate = selectedCandidates.filter((candidate) => candidate.type === "late").length;
   const selectedBreak = selectedCandidates.filter((candidate) => candidate.type === "break").length;
+  const irregularityCount = candidates
+    .filter((candidate) => candidate.type === "irregularity")
+    .reduce((sum, candidate) => sum + candidate.details.length, 0);
   const currentStep = generatedOnce ? 3 : workbook ? 2 : 1;
 
   const processFile = async (file: File | undefined) => {
@@ -162,7 +188,9 @@ export default function NotificationWorkbench() {
       const detected = detectIncidents(result.records, settings);
       setWorkbook(result);
       setFileName(file.name);
-      setSelectedIds(new Set(detected.map((candidate) => candidate.id)));
+      setSelectedIds(
+        new Set(detected.filter(isDocumentCandidate).map((candidate) => candidate.id)),
+      );
       setExpandedIds(new Set());
       setAnalysisRevision((current) => current + 1);
       setSearch("");
@@ -233,6 +261,7 @@ export default function NotificationWorkbench() {
     setSelectedIds((current) => {
       const next = new Set(current);
       for (const candidate of filteredCandidates) {
+        if (!isDocumentCandidate(candidate)) continue;
         if (selected) next.add(candidate.id);
         else next.delete(candidate.id);
       }
@@ -244,7 +273,9 @@ export default function NotificationWorkbench() {
     setSettings(value);
     if (workbook) {
       const detected = detectIncidents(workbook.records, value);
-      setSelectedIds(new Set(detected.map((candidate) => candidate.id)));
+      setSelectedIds(
+        new Set(detected.filter(isDocumentCandidate).map((candidate) => candidate.id)),
+      );
       setExpandedIds(new Set());
       setGeneratedMessage("");
     }
@@ -389,7 +420,7 @@ export default function NotificationWorkbench() {
             <div>
               <strong>{fileName}</strong>
               <span>
-                Hoja “{workbook.sheetName}” · {workbook.records.length} registros · {formatDateNumeric(workbook.dateFrom)} al {formatDateNumeric(workbook.dateTo)}
+                Hoja “{workbook.sheetName}” · {workbook.records.length} registros · {workbook.employeeCount} empleados · {formatDateNumeric(workbook.dateFrom)} al {formatDateNumeric(workbook.dateTo)}
               </span>
             </div>
             <button type="button" className="ghost-button" onClick={resetWorkbook}>
@@ -405,9 +436,9 @@ export default function NotificationWorkbench() {
 
           <div className="summary-grid">
             <SummaryCard icon={<FileText />} value={selectedCandidates.length} label="Documentos seleccionados" />
-            <SummaryCard icon={<Users />} value={workbook.employeeCount} label="Empleados analizados" />
             <SummaryCard icon={<Clock3 />} value={selectedLate} label="Avisos por tardanza" tone="late" />
             <SummaryCard icon={<Clock3 />} value={selectedBreak} label="Avisos por descanso" tone="break" />
+            <SummaryCard icon={<AlertTriangle />} value={irregularityCount} label="Registros irregulares" tone="irregularity" />
           </div>
 
           <div className="review-layout">
@@ -415,10 +446,10 @@ export default function NotificationWorkbench() {
               <div className="review-heading">
                 <div>
                   <p className="section-kicker">PASO 2</p>
-                  <h2>Revisá las notificaciones</h2>
-                  <p>Todos los casos quedan seleccionados inicialmente. Podés excluir cualquier excepción.</p>
+                  <h2>Revisá los resultados</h2>
+                  <p>Las notificaciones se preseleccionan; las irregularidades quedan señaladas solo para revisión.</p>
                 </div>
-                <span className="counter-chip">{selectedCandidates.length} / {candidates.length}</span>
+                <span className="counter-chip">{selectedCandidates.length} docs · {irregularityCount} alertas</span>
               </div>
 
               <div className="review-toolbar">
@@ -436,6 +467,7 @@ export default function NotificationWorkbench() {
                     ["all", "Todos"],
                     ["late", "Tardanzas"],
                     ["break", "Descansos"],
+                    ["irregularity", "Irregularidades"],
                   ] as const).map(([value, label]) => (
                     <button
                       type="button"
@@ -451,32 +483,43 @@ export default function NotificationWorkbench() {
 
               <div className="selection-actions">
                 <span>{filteredCandidates.length} resultados</span>
-                <div>
-                  <button type="button" onClick={() => selectFiltered(true)}>Seleccionar visibles</button>
-                  <button type="button" onClick={() => selectFiltered(false)}>Quitar visibles</button>
-                </div>
+                {filteredCandidates.some(isDocumentCandidate) ? (
+                  <div>
+                    <button type="button" onClick={() => selectFiltered(true)}>Seleccionar visibles</button>
+                    <button type="button" onClick={() => selectFiltered(false)}>Quitar visibles</button>
+                  </div>
+                ) : (
+                  <span className="review-only-note"><AlertTriangle size={13} /> Alertas solo para revisión</span>
+                )}
               </div>
 
               <div className="candidate-list">
                 {filteredCandidates.length ? (
                   filteredCandidates.map((candidate) => {
+                    const documentCandidate = isDocumentCandidate(candidate);
                     const selected = selectedIds.has(candidate.id);
                     const expanded = expandedIds.has(candidate.id);
                     return (
                       <div
-                        className={`candidate ${selected ? "selected" : ""}`}
+                        className={`candidate ${selected ? "selected" : ""} ${documentCandidate ? "" : "review-only"}`}
                         key={`${analysisRevision}-${candidate.id}`}
                       >
                         <div className="candidate-main">
-                          <label className="checkbox-control">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              onChange={() => toggleSelection(candidate.id)}
-                              aria-label={`${selected ? "Excluir" : "Incluir"} ${candidate.employeeName}`}
-                            />
-                            <span><Check size={14} /></span>
-                          </label>
+                          {documentCandidate ? (
+                            <label className="checkbox-control">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleSelection(candidate.id)}
+                                aria-label={`${selected ? "Excluir" : "Incluir"} ${candidate.employeeName}`}
+                              />
+                              <span><Check size={14} /></span>
+                            </label>
+                          ) : (
+                            <span className="irregular-marker" title="Esta alerta no genera un documento">
+                              <AlertTriangle size={14} />
+                            </span>
+                          )}
                           <div className="avatar">{initials(candidate.employeeName)}</div>
                           <div className="candidate-identity">
                             <strong>{candidate.employeeName}</strong>
@@ -490,11 +533,18 @@ export default function NotificationWorkbench() {
                           </span>
                           <div className="incident-count">
                             <strong>{candidate.details.length}</strong>
-                            <span>{candidate.details.length === 1 ? "incidencia" : "incidencias"}</span>
+                            <span>
+                              {candidate.type === "irregularity"
+                                ? candidate.details.length === 1 ? "día" : "días"
+                                : candidate.details.length === 1 ? "incidencia" : "incidencias"}
+                            </span>
                           </div>
                           <div className="incident-total">
-                            <strong>+{formatDuration(candidate.totalMinutes)}</strong>
-                            <span>acumulado</span>
+                            {candidate.type === "irregularity" ? (
+                              <><strong>Revisar</strong><span>no genera Word</span></>
+                            ) : (
+                              <><strong>+{formatDuration(candidate.totalMinutes)}</strong><span>acumulado</span></>
+                            )}
                           </div>
                           <button
                             type="button"
@@ -653,8 +703,8 @@ function SettingsPanel({
         </div>
       </div>
       <div className="settings-note">
-        <strong>Las reglas son una primera selección.</strong>
-        <p>Antes de generar, podés incluir o excluir casos según las excepciones internas.</p>
+        <strong>El descanso se calcula entre las fichadas 2 y 3.</strong>
+        <p>Administración, Reparto, Ventas y Cocina esperan 2 fichadas y no se controlan por descanso. Los demás sectores esperan 4; cualquier diferencia se muestra como irregularidad.</p>
       </div>
     </aside>
   );
@@ -669,7 +719,7 @@ function SummaryCard({
   icon: ReactNode;
   value: number;
   label: string;
-  tone?: "default" | "late" | "break";
+  tone?: "default" | "late" | "break" | "irregularity";
 }) {
   return (
     <div className={`summary-card ${tone}`}>

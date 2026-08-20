@@ -31,7 +31,7 @@ test("cada archivo produce un análisis independiente", () => {
   const first = parseWorkbookSheets(
     "semana-a.xlsx",
     workbookSheet([
-      "Administración",
+      "Depósito",
       "PERSONA A",
       100001,
       "20-12345678-9",
@@ -45,7 +45,7 @@ test("cada archivo produce un análisis independiente", () => {
   const second = parseWorkbookSheets(
     "semana-b.xlsx",
     workbookSheet([
-      "Administración",
+      "Depósito",
       "PERSONA B",
       100002,
       "27-12345678-8",

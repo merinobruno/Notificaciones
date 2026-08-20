@@ -6,9 +6,9 @@ import {
   generateNotificationZip,
   notificationFileName,
 } from "../lib/generate-documents";
-import type { NotificationCandidate } from "../lib/types";
+import type { DocumentNotificationCandidate } from "../lib/types";
 
-const candidate: NotificationCandidate = {
+const candidate: DocumentNotificationCandidate = {
   id: "100001::break",
   type: "break",
   employeeName: "PERSONA DE PRUEBA",
